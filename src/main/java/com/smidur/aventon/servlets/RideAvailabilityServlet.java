@@ -1,11 +1,17 @@
 package com.smidur.aventon.servlets;
 
+import com.smidur.aventon.managers.RideManager;
+import com.smidur.aventon.models.Driver;
+import com.smidur.aventon.models.Passenger;
+
 import javax.servlet.AsyncContext;
+import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -15,33 +21,17 @@ import java.util.TimerTask;
 @WebServlet
 public class RideAvailabilityServlet extends HttpServlet {
 
-    Timer timer = new Timer("ClientNotifier");
 
+    RideManager rideManager = RideManager.i();
 
-    public void doGet(HttpServletRequest req, HttpServletResponse res) {
-        final AsyncContext aCtx = req.startAsync(req, res);
-        aCtx.setTimeout(3* 60 * 1000);
-        System.out.println("Async Timeout:"+aCtx.getTimeout());
-        // Suspend request for 30 Secs
-        timer.schedule(new TimerTask() {
+    @Override
+    public void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        super.doGet(req, resp);
 
-            public void run() {
-                try{
-
-                    //read unread alerts count
-//                        int unreadAlertCount = alertManager.getUnreadAlerts();
-                    // write unread alerts count
-                    ServletOutputStream outputStream = aCtx.getResponse().getOutputStream();
-                    outputStream.println("Hello");
-                    outputStream.flush();
-
-                }
-                catch(Exception e){
-                    e.printStackTrace();
-                }
-                aCtx.complete();
-            }
-        }, (3 * 60 * 1000) - (5 * 1000));
+        rideManager.lookForRide(
+                req.startAsync(req,resp),
+                new Driver("driver1"),
+                null);
 
     }
 
