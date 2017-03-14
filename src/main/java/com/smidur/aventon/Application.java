@@ -80,10 +80,11 @@ public class Application {
         handler.addServletWithMapping(HomeServlet.class, "/*");
         handler.addServletWithMapping(TraceServlet.class, "/trace");
         handler.addServletWithMapping(CronServlet.class, "/crontask");
-        handler.addServletWithMapping(AcceptRideServlet.class , "/accept_ride");
         handler.addServletWithMapping(DriverLocatorServlet.class, "/locate_drivers");
-        handler.addServletWithMapping(RideAvailabilityServlet.class, "/available_rides");
-        handler.addServletWithMapping(SchedulePickupServlet.class, "/shcedule_pickup");
+        handler.addServletWithMapping(
+                RideAvailabilityServlet.class, "/available_rides/*");
+        handler.addServletWithMapping(SchedulePickupServlet.class, "/shcedule_pickup/*");
+        handler.addServletWithMapping(AcceptRideServlet.class , "/accept_ride/*");
 
         handler.addFilterWithMapping(AWSXRayServletFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
         server.setHandler(handler);

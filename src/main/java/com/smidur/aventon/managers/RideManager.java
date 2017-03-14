@@ -101,8 +101,9 @@ public class RideManager {
                 outputStream.println("Passenger: "+passenger.toString());
                 outputStream.flush();
 
+            } catch(IllegalStateException ise){
+                driverAwaitingRide.remove(driverEntry.getKey());
             } catch(Exception e){
-                //todo is connection dropped?
                 e.printStackTrace();
             }
             driverAsync.complete();

@@ -18,7 +18,7 @@ import java.util.TimerTask;
 /**
  * Created by marqueg on 2/7/17.
  */
-@WebServlet
+@WebServlet(asyncSupported = true)
 public class RideAvailabilityServlet extends HttpServlet {
 
 
@@ -26,7 +26,13 @@ public class RideAvailabilityServlet extends HttpServlet {
 
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        super.doGet(req, resp);
+
+        String[] url = req.getRequestURL().toString().split("/");
+        for(int i = 0; i < url.length;i++) {
+            String user = url[i];
+            System.out.println("User: "+ user.toString());
+        }
+
 
         rideManager.lookForRide(
                 req.startAsync(req,resp),
