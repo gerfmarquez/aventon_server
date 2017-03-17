@@ -5,6 +5,7 @@ import com.smidur.aventon.models.Driver;
 import com.smidur.aventon.models.Passenger;
 
 import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -29,9 +30,19 @@ public class AcceptRideServlet extends HttpServlet  {
         String driver = url[4].toString();
         String passenger = url[5].toString();
 
+
+
+
+
         rideManager.confirmRide(
                 new Driver(driver),
                 new Passenger(passenger),
                 null);
+
+        ServletOutputStream outputStream = resp.getOutputStream();
+        outputStream.println("Good");
+        outputStream.flush();
+        outputStream.close();
+
     }
 }
