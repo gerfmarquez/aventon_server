@@ -28,15 +28,14 @@ public class RideAvailabilityServlet extends HttpServlet {
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         String[] url = req.getRequestURL().toString().split("/");
-        for(int i = 0; i < url.length;i++) {
-            String user = url[i];
-            System.out.println("User: "+ user.toString());
-        }
-
+//        for(int i = 0; i < url.length;i++) {
+//            System.out.println("User: "+ url[i].toString());
+//        }
+        String driver = url[4].toString();
 
         rideManager.lookForRide(
                 req.startAsync(req,resp),
-                new Driver("driver1"),
+                new Driver(driver),
                 null);
 
     }

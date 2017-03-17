@@ -22,8 +22,10 @@ public class RideManager {
 
     HashMap<String,Ride> rideHashMap = new HashMap<>();
 
-    HashMap<AsyncContext,Driver> driverAwaitingRide = new HashMap<>();
-    HashMap<AsyncContext,Passenger> passengerAwaitingPickup = new HashMap<>();
+    //todo make these two hashmap's keys be the Driver and passenger so they're unique
+    HashMap<Driver,AsyncContext> driverAwaitingRide = new HashMap<>();
+    HashMap<Passenger,AsyncContext> passengerAwaitingPickup = new HashMap<>();
+    //todo also there should be a scheduled task that cleans up async contexts connections that are closed.
 
 
     void findDriversNearby(PassengerLocation passengerLocation) {}
@@ -36,9 +38,10 @@ public class RideManager {
      */
     public void requestPickup(AsyncContext passengerAsync, Passenger passenger, AcceptPickup acceptPickup) {
 
-        passengerAwaitingPickup.put(passengerAsync, passenger);
+        passengerAwaitingPickup.put(passenger,passengerAsync );
 
         onRideAvailable(passenger);
+        //todo what happens if they're no rides available (nearby?) ? send fail error message?
     }
 
     public interface AcceptPickup {
@@ -49,22 +52,25 @@ public class RideManager {
         void onAcceptPickup(Driver driver);
     }
     private void onAcceptPickup(Driver driver, Passenger passenger) {
-        for(Map.Entry<AsyncContext,Passenger> passengerEntry: passengerAwaitingPickup.entrySet()) {
+        for(Map.Entry<Passenger,AsyncContext> passengerEntry: passengerAwaitingPickup.entrySet()) {
 
-            Passenger tempPassenger = passengerEntry.getValue();
+            Passenger tempPassenger = passengerEntry.getKey();
             AsyncContext passengerAsync  = null;
 
             if(tempPassenger.equals(passenger)) {
 
-                passengerAsync = passengerEntry.getKey();
+                passengerAsync = passengerEntry.getValue();
 
                 try {
                     ServletOutputStream outputStream = passengerAsync.getResponse().getOutputStream();
                     outputStream.println("Driver: "+driver.toString());
                     outputStream.flush();
 
+                } catch(IllegalStateException ise){
+                    //todo improve connection dropped logic
+                    passengerAwaitingPickup.remove(passengerEntry.getKey());
+                    ise.printStackTrace();
                 } catch(Exception e){
-                    //todo is connection dropped?
                     e.printStackTrace();
                 }
                 passengerAsync.complete();
@@ -81,7 +87,8 @@ public class RideManager {
      * @param rideAvailable the callback that the passenger INDIRECTLY calls when they {@link #requestPickup}.
      */
     public void lookForRide(AsyncContext asyncContext,Driver driver, RideAvailable rideAvailable) {
-        driverAwaitingRide.put(asyncContext,driver);
+        //todo check if the previous async context is closed before assigning the new one to the same Driver.
+        driverAwaitingRide.put(driver,asyncContext);
     }
 
     public interface RideAvailable {
@@ -92,9 +99,9 @@ public class RideManager {
         void onRideAvailable(Passenger passenger);
     }
     private void onRideAvailable(Passenger passenger) {
-        for(Map.Entry<AsyncContext,Driver> driverEntry: driverAwaitingRide.entrySet()) {
+        for(Map.Entry<Driver,AsyncContext> driverEntry: driverAwaitingRide.entrySet()) {
 
-            AsyncContext driverAsync = driverEntry.getKey();
+            AsyncContext driverAsync = driverEntry.getValue();
 
             try {
                 ServletOutputStream outputStream = driverAsync.getResponse().getOutputStream();
@@ -102,7 +109,9 @@ public class RideManager {
                 outputStream.flush();
 
             } catch(IllegalStateException ise){
+                //todo improve connection dropped logic
                 driverAwaitingRide.remove(driverEntry.getKey());
+                ise.printStackTrace();
             } catch(Exception e){
                 e.printStackTrace();
             }

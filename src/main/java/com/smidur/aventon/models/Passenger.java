@@ -6,6 +6,9 @@ package com.smidur.aventon.models;
 public class Passenger {
     String passengerId;
     PassengerLocation passengerLocation;
+    private Passenger() {
+        //NOP
+    }
     public Passenger(String passengerId) {
         this.passengerId = passengerId;
     }

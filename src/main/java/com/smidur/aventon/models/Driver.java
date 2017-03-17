@@ -7,6 +7,9 @@ public class Driver {
     String driverId;
     DriverLocation driverLocation;
 
+    private Driver() {
+        //NOP
+    }
     public Driver(String driverId) {
         this.driverId = driverId;
     }

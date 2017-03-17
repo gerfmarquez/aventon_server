@@ -23,14 +23,15 @@ public class AcceptRideServlet extends HttpServlet  {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         String[] url = req.getRequestURL().toString().split("/");
-        for(int i = 0; i < url.length;i++) {
-            String user = url[i];
-            System.out.println("User: "+ user.toString());
-        }
+//        for(int i = 0; i < url.length;i++) {
+//            System.out.println("User: "+ url[i].toString());
+//        }
+        String driver = url[4].toString();
+        String passenger = url[5].toString();
 
         rideManager.confirmRide(
-                new Driver("driver1"),
-                new Passenger("passenger1"),
+                new Driver(driver),
+                new Passenger(passenger),
                 null);
     }
 }
