@@ -37,8 +37,10 @@ public class RideManager {
      * @param acceptPickup the callback that the driver INDIRECTLY  calls when they {@link #confirmRide}
      */
     public void requestPickup(AsyncContext passengerAsync, Passenger passenger, AcceptPickup acceptPickup) {
-
-        passengerAwaitingPickup.put(passenger,passengerAsync );
+        AsyncContext previousAsyncContext = passengerAwaitingPickup.put(passenger,passengerAsync);
+        if(previousAsyncContext != null) {
+            previousAsyncContext.complete();
+        }
 
         onRideAvailable(passenger);
         //todo what happens if they're no rides available (nearby?) ? send fail error message?
@@ -88,7 +90,11 @@ public class RideManager {
      */
     public void lookForRide(AsyncContext asyncContext,Driver driver, RideAvailable rideAvailable) {
         //todo check if the previous async context is closed before assigning the new one to the same Driver.
-        driverAwaitingRide.put(driver,asyncContext);
+
+        AsyncContext previousAsyncContext = driverAwaitingRide.put(driver,asyncContext);
+        if(previousAsyncContext != null) {
+            previousAsyncContext.complete();
+        }
     }
 
     public interface RideAvailable {
