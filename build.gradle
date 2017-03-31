@@ -42,10 +42,23 @@ dependencies {
     compile files("lib/jetty-util-9.4.0.RC2.jar")
     compile files("lib/jetty-webapp-9.4.0.RC2.jar")
     compile files("lib/jetty-xml-9.4.0.RC2.jar")
+//    compile files("lib/jetty-jsp-9.2.21.v20170120.jar")
     compile files("lib/jmespath-java-1.0.jar")
     compile files("lib/joda-time-2.8.1.jar")
+
+    compile "org.eclipse.jetty:jetty-annotations:9.4.0.RC2"
+    compile "org.eclipse.jetty:apache-jsp:9.4.0.RC2"
+    compile "jstl:jstl:1.2"
+
+
+
 }
 
 task wrapper(type: Wrapper) {
     gradleVersion = '2.3'
+}
+allprojects {
+    repositories {
+        jcenter()
+    }
 }
