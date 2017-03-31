@@ -5,6 +5,9 @@ import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.cognitoidentity.AmazonCognitoIdentityClient;
 import com.amazonaws.services.cognitoidentity.model.GetCredentialsForIdentityRequest;
 import com.amazonaws.services.cognitoidentity.model.GetCredentialsForIdentityResult;
+import com.google.gson.Gson;
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonObject;
 import com.smidur.aventon.managers.RideManager;
 import com.smidur.aventon.models.Driver;
 import com.smidur.aventon.models.Passenger;
@@ -17,10 +20,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 
 /**
  * Created by marqueg on 2/7/17.
@@ -31,6 +31,10 @@ public class RideAvailabilityServlet extends HttpServlet {
 
     RideManager rideManager = RideManager.i();
 
+    class Payload {
+        String sub;
+    }
+
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
@@ -38,16 +42,39 @@ public class RideAvailabilityServlet extends HttpServlet {
 //        for(int i = 0; i < url.length;i++) {
 //            System.out.println("User: "+ url[i].toString());
 //        }
-        Map providerTokens = new HashMap();
-        providerTokens.put("cognito-identity.amazonaws.com", "auidhashaisdhals");
-        tokenRequest.setLogins(providerTokens);
+        String authorizationParameter = req.getHeader("Authorization");
+        System.out.println("authorization "+authorizationParameter);
+        String payload[] = authorizationParameter.split("\\.");
+//        for(int i = 0; i < payload.length; i++) {
+            System.out.println("tp decode payload "+ " ,"+payload[1]);
+            String decodedPayload = new String(Base64.getDecoder().decode(payload[1].getBytes()));
+            System.out.println("decoded payload "+ " ,"+decodedPayload);
+//        }
+        try {
+            Payload payloadObject = new Gson().fromJson(decodedPayload, Payload.class);
+            String cognitoIdentityId = payloadObject.sub;
 
-        AmazonCognitoIdentityClient identityClient = new AmazonCognitoIdentityClient();
-        identityClient.setRegion(RegionUtils.getRegion(Configuration.REGION));
-        GetCredentialsForIdentityRequest request = new GetCredentialsForIdentityRequest();
-        request.withLogins(providerTokens);
-        request.setIdentityId("us-east-1:XXXXX-9ac6-YYYY-ac07-ZZZZZZZZZZZZ");
-        GetCredentialsForIdentityResult tokenResp = identityClient.getCredentialsForIdentity(request);
+            Map providerTokens = new HashMap();
+            providerTokens.put("cognito-identity.amazonaws.com", authorizationParameter);
+//        GettokenRequest.setLogins(providerTokens);
+
+            AmazonCognitoIdentityClient identityClient = new AmazonCognitoIdentityClient();
+            identityClient.setRegion(RegionUtils.getRegion(Configuration.REGION));
+            GetCredentialsForIdentityRequest request = new GetCredentialsForIdentityRequest();
+            request.withLogins(providerTokens);
+            request.setIdentityId(cognitoIdentityId);
+            GetCredentialsForIdentityResult tokenResp = identityClient.getCredentialsForIdentity(request);
+
+            System.out.println("Token: "+tokenResp);
+
+        } catch(JsonIOException jsonExc) {
+            jsonExc.printStackTrace();
+        }
+
+
+        //todo handle not valid token
+
+
 
 
         String driver = url[4].toString();

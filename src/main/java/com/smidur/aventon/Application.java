@@ -16,7 +16,6 @@ import com.smidur.aventon.servlets.SchedulePickupServlet;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.webapp.WebAppContext;
 
 import javax.servlet.*;
 import javax.servlet.annotation.WebServlet;
@@ -26,7 +25,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.URL;
 import java.util.*;
 
 public class Application {
@@ -37,10 +35,10 @@ public class Application {
 
     // Initialize the global AWS XRay Recorder with the Elastic Beanstalk plugin to trace environment metadata
 
-//    static {
-//        AWSXRayRecorderBuilder builder = AWSXRayRecorderBuilder.standard().withPlugin(new ElasticBeanstalkPlugin());
-//        AWSXRay.setGlobalRecorder(builder.build());
-//    }
+    static {
+        AWSXRayRecorderBuilder builder = AWSXRayRecorderBuilder.standard().withPlugin(new ElasticBeanstalkPlugin());
+        AWSXRay.setGlobalRecorder(builder.build());
+    }
 
 
     // Create AWS clients instrumented with AWS XRay tracing handler
@@ -49,10 +47,9 @@ public class Application {
 //            .withRegion(Regions.getCurrentRegion().getName())
 //            .withRequestHandlers(new TracingHandler())
 //            .build();
-//
+
     private static String loadIndex() {
-//        final String fileName = isXRayEnabled() ? "/index_xray.html" : "/index_default.html";
-        final String fileName =  "/index_default.html";
+        final String fileName = isXRayEnabled() ? "/index_xray.html" : "/index_default.html";
         try {
             final String page = new Scanner(Application.class.getResourceAsStream(fileName), "UTF-8").useDelimiter("\\A").next();
             return page;
@@ -73,60 +70,27 @@ public class Application {
         return Integer.parseInt(System.getenv().get("PORT"));
     }
 
-//    private static boolean isXRayEnabled() {
-//        return Boolean.valueOf(System.getenv("XRAY_ENABLED"));
-//    }
+    private static boolean isXRayEnabled() {
+        return Boolean.valueOf(System.getenv("XRAY_ENABLED"));
+    }
 
     public static void main(String[] args) throws Exception {
         Server server = new Server(getPort());
-//        ServletHandler handler = new ServletHandler();
-//        handler.addServletWithMapping(HomeServlet.class, "/*");
+        ServletHandler handler = new ServletHandler();
+        handler.addServletWithMapping(HomeServlet.class, "/*");
 //        handler.addServletWithMapping(TraceServlet.class, "/trace");
-//        handler.addServletWithMapping(CronServlet.class, "/crontask");
-//        handler.addServletWithMapping(DriverLocatorServlet.class, "/locate_drivers");
-//        handler.addServletWithMapping(
-//                RideAvailabilityServlet.class, "/available_rides/*");
-//        handler.addServletWithMapping(SchedulePickupServlet.class, "/shcedule_pickup/*");
-//        handler.addServletWithMapping(AcceptRideServlet.class , "/accept_ride/*");
-//
-//
-//
-//        handler.addFilterWithMapping(AWSXRayServletFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
-//        server.setHandler(handler);
+        handler.addServletWithMapping(CronServlet.class, "/crontask");
+        handler.addServletWithMapping(DriverLocatorServlet.class, "/locate_drivers");
+        handler.addServletWithMapping(
+                RideAvailabilityServlet.class, "/available_rides/*");
+        handler.addServletWithMapping(SchedulePickupServlet.class, "/shcedule_pickup/*");
+        handler.addServletWithMapping(AcceptRideServlet.class , "/accept_ride/*");
 
+        handler.addFilterWithMapping(AWSXRayServletFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
+        server.setHandler(handler);
 
-        // assumes that this directory contains .html and .jsp files
-        // This is just a directory within your source tree, and can be exported as part of your normal .jar
-        final String WEBAPPDIR = "webapp";
-        final String CONTEXTPATH = "/";
-
-        // for localhost:port/admin/index.html and whatever else is in the webapp directory
-        final URL warUrl = Application.class.getClassLoader().getResource(WEBAPPDIR);
-        System.out.println("war url"+warUrl);
-        final String warUrlString = warUrl.toExternalForm();
-        System.out.println("war url string"+warUrlString);
-        WebAppContext ctx = new WebAppContext(warUrlString, CONTEXTPATH);
-
-        //3. Including the JSTL jars for the webapp.
-
-        ctx.setAttribute("org.eclipse.jetty.server.webapp.ContainerIncludeJarPattern",".*/[^/]*jstl.*\\.jar$");
-
-
-
-        //4. Enabling the Annotation based configuration
-
-        org.eclipse.jetty.webapp.Configuration.ClassList classlist = org.eclipse.jetty.webapp.Configuration.ClassList.setServerDefault(server);
-        classlist.addAfter("org.eclipse.jetty.webapp.FragmentConfiguration", "org.eclipse.jetty.plus.webapp.EnvConfiguration", "org.eclipse.jetty.plus.webapp.PlusConfiguration");
-
-        classlist.addBefore("org.eclipse.jetty.webapp.JettyWebXmlConfiguration", "org.eclipse.jetty.annotations.AnnotationConfiguration");
-
-        server.setHandler(ctx);
         server.start();
         server.join();
-
-
-
-
     }
 
 
