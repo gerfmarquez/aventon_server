@@ -26,7 +26,7 @@ import java.util.*;
  * Created by marqueg on 2/7/17.
  */
 @WebServlet(asyncSupported = true)
-public class RideAvailabilityServlet extends HttpServlet {
+public class RideAvailabilityServlet extends RootServlet {
 
 
     RideManager rideManager = RideManager.i();
@@ -38,52 +38,25 @@ public class RideAvailabilityServlet extends HttpServlet {
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-        String[] url = req.getRequestURL().toString().split("/");
-//        for(int i = 0; i < url.length;i++) {
-//            System.out.println("User: "+ url[i].toString());
-//        }
-        String authorizationParameter = req.getHeader("Authorization");
-        System.out.println("authorization "+authorizationParameter);
-        String payload[] = authorizationParameter.split("\\.");
-//        for(int i = 0; i < payload.length; i++) {
-            System.out.println("tp decode payload "+ " ,"+payload[1]);
-            String decodedPayload = new String(Base64.getDecoder().decode(payload[1].getBytes()));
-            System.out.println("decoded payload "+ " ,"+decodedPayload);
-//        }
+        AsyncContext asyncContext = req.startAsync();
+
         try {
-            Payload payloadObject = new Gson().fromJson(decodedPayload, Payload.class);
-            String cognitoIdentityId = payloadObject.sub;
-
-            Map providerTokens = new HashMap();
-            providerTokens.put("cognito-identity.amazonaws.com", authorizationParameter);
-//        GettokenRequest.setLogins(providerTokens);
-
-            AmazonCognitoIdentityClient identityClient = new AmazonCognitoIdentityClient();
-            identityClient.setRegion(RegionUtils.getRegion(Configuration.REGION));
-            GetCredentialsForIdentityRequest request = new GetCredentialsForIdentityRequest();
-            request.withLogins(providerTokens);
-            request.setIdentityId(cognitoIdentityId);
-            GetCredentialsForIdentityResult tokenResp = identityClient.getCredentialsForIdentity(request);
-
-            System.out.println("Token: "+tokenResp);
-
-        } catch(JsonIOException jsonExc) {
-            jsonExc.printStackTrace();
+            rideManager.lookForRide(asyncContext,
+                    extractDriver(req.getHeader("Authorization")),
+                    null);
+        } catch(TokenNotValidException tnve) {
+            resp.sendError(401,"Unauthorized Access");
         }
+        try {
+            resp.sendError(500);
+        } catch(IOException ioe) {
 
-
-        //todo handle not valid token
-
-
-
-
-        String driver = url[4].toString();
-
-        rideManager.lookForRide(
-                req.startAsync(req,resp),
-                new Driver(driver),
-                null);
+        }
+        return;
 
     }
+
+
+
 
 }

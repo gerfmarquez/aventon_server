@@ -46,9 +46,9 @@ dependencies {
     compile files("lib/jmespath-java-1.0.jar")
     compile files("lib/joda-time-2.8.1.jar")
 
-    compile "org.eclipse.jetty:jetty-annotations:9.4.0.RC2"
-    compile "org.eclipse.jetty:apache-jsp:9.4.0.RC2"
-    compile "jstl:jstl:1.2"
+//    compile "org.eclipse.jetty:jetty-annotations:9.4.0.RC2"
+//    compile "org.eclipse.jetty:apache-jsp:9.4.0.RC2"
+//    compile "jstl:jstl:1.2"
     compile 'com.google.code.gson:gson:2.3'
 
 
