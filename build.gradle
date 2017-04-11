@@ -12,8 +12,8 @@ jar {
 }
 
 dependencies {
-    compile files("lib/aws-java-sdk-core-1.11.60.jar")
-    compile files("lib/aws-java-sdk-1.11.104.jar")
+
+    compile files("lib/aws-java-sdk-1.11.118.jar")
     compile files("lib/aws-java-sdk-kms-1.11.52.jar")
     compile files("lib/aws-java-sdk-s3-1.11.52.jar")
     compile files("lib/aws-xray-recorder-sdk-aws-sdk-1.0.0-beta.jar")

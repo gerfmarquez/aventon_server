@@ -14,22 +14,22 @@ import java.io.IOException;
  * Created by marqueg on 2/7/17.
  */
 @WebServlet(asyncSupported = true)
-public class SchedulePickupServlet extends RootServlet {
+public class SchedulePickupServlet extends HttpServlet {
 
     RideManager rideManager = RideManager.i();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-
-        try {
-            rideManager.requestPickup(
-                    req.startAsync(req,resp),
-                    extractPassenger(req.getHeader("Authorization")),
-                    null);
-        } catch(TokenNotValidException tnve) {
-            resp.sendError(401,"Unauthorized Access");
-        }
+//
+//        try {
+//            rideManager.requestPickup(
+//                    req.startAsync(req,resp),
+//                    extractPassenger(req.getHeader("Authorization")),
+//                    null);
+//        } catch(TokenNotValidException tnve) {
+//            resp.sendError(401,"Unauthorized Access");
+//        }
     }
 
 

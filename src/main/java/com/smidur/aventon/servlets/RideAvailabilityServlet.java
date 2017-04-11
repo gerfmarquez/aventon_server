@@ -26,7 +26,7 @@ import java.util.*;
  * Created by marqueg on 2/7/17.
  */
 @WebServlet(asyncSupported = true)
-public class RideAvailabilityServlet extends RootServlet {
+public class RideAvailabilityServlet extends HttpServlet {
 
 
     RideManager rideManager = RideManager.i();
@@ -38,25 +38,65 @@ public class RideAvailabilityServlet extends RootServlet {
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-        AsyncContext asyncContext = req.startAsync();
 
         try {
+            AsyncContext asyncContext = req.startAsync();
+            asyncContext.setTimeout(240000);
             rideManager.lookForRide(asyncContext,
                     extractDriver(req.getHeader("Authorization")),
                     null);
         } catch(TokenNotValidException tnve) {
-            resp.sendError(401,"Unauthorized Access");
-        }
-        try {
-            resp.sendError(500);
-        } catch(IOException ioe) {
 
         }
-        return;
+
 
     }
 
+    private String extractIdentifier(String authorizationParameter) throws TokenNotValidException {
+        System.out.println("authorization "+authorizationParameter);
+        String payload[] = authorizationParameter.split("\\.");
+//        for(int i = 0; i < payload.length; i++) {
+        System.out.println("tp decode payload "+ " ,"+payload[1]);
+        String decodedPayload = new String(Base64.getDecoder().decode(payload[1].getBytes()));
+        System.out.println("decoded payload "+ " ,"+decodedPayload);
+//        }
+        try {
+            RideAvailabilityServlet.Payload payloadObject = new Gson().fromJson(decodedPayload, RideAvailabilityServlet.Payload.class);
+            String cognitoIdentityId = payloadObject.sub;
+
+            Map providerTokens = new HashMap();
+            providerTokens.put("cognito-identity.amazonaws.com", authorizationParameter);
+//        GettokenRequest.setLogins(providerTokens);
+
+            AmazonCognitoIdentityClient identityClient = new AmazonCognitoIdentityClient();
+            identityClient.setRegion(RegionUtils.getRegion(Configuration.REGION));
+            GetCredentialsForIdentityRequest request = new GetCredentialsForIdentityRequest();
+            request.withLogins(providerTokens);
+            request.setIdentityId(cognitoIdentityId);
+            GetCredentialsForIdentityResult tokenResp = identityClient.getCredentialsForIdentity(request);
+            //todo handle exception internal server error when token is not valid!! yay!!
+            System.out.println("Token: "+tokenResp);
+
+            //todo get the driver from memory?
+            return cognitoIdentityId;
 
 
+        } catch(JsonIOException jsonExc) {
+            jsonExc.printStackTrace();
+        }
+        throw new TokenNotValidException();
+    }
+    class TokenNotValidException extends Exception {
 
+    }
+    protected Driver extractDriver(String authorizationParameter) throws TokenNotValidException {
+//        String[] url = req.getRequestURL().toString().split("/");
+//        for(int i = 0; i < url.length;i++) {
+//            System.out.println("User: "+ url[i].toString());
+//        }
+//        String authorizationParameter = authorization;
+        return new Driver(extractIdentifier(authorizationParameter));
+
+//        String driver = url[4].toString();
+    }
 }
