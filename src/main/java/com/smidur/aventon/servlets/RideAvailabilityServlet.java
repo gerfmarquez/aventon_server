@@ -37,6 +37,9 @@ public class RideAvailabilityServlet extends HttpServlet {
 
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        //todo fucking handle IOexception that makes the servlet restart over and over again!!!!
+        //todo one step closer, updated aws java library. other than that i was using an invalid token so that's why getcredentials call for aws didn't work.
+        // i have to handle internal server error that occurs when token is not valid. also prevent app from calling doget multiple times due to unexpected exceptions of aws
 
 
         try {
