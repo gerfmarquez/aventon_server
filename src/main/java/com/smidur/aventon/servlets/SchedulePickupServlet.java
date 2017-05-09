@@ -1,16 +1,12 @@
 package com.smidur.aventon.servlets;
 
 import com.smidur.aventon.managers.RideManager;
-import com.smidur.aventon.models.Passenger;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.util.logging.Level;
 
 /**
@@ -22,7 +18,7 @@ public class SchedulePickupServlet extends RootServlet {
     RideManager rideManager = RideManager.i();
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)  {
 
         if(req.getDispatcherType() == DispatcherType.ERROR) {
             //todo remove async context from Ride Manager

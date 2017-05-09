@@ -81,8 +81,7 @@ public class Application {
 //        handler.addServletWithMapping(TraceServlet.class, "/trace");
         handler.addServletWithMapping(CronServlet.class, "/crontask");
         handler.addServletWithMapping(DriverLocatorServlet.class, "/locate_drivers");
-        handler.addServletWithMapping(
-                RideAvailabilityServlet.class, "/available_rides/*");
+        handler.addServletWithMapping(RideAvailabilityServlet.class, "/available_rides/*");
         handler.addServletWithMapping(SchedulePickupServlet.class, "/shcedule_pickup/*");
         handler.addServletWithMapping(AcceptRideServlet.class , "/accept_ride/*");
 
