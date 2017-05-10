@@ -38,11 +38,16 @@ public class RideManager {
      */
     public void requestPickup(AsyncContext passengerAsync, Passenger passenger, AcceptPickup acceptPickup) {
         AsyncContext previousAsyncContext = passengerAwaitingPickup.put(passenger,passengerAsync);
+
         if(previousAsyncContext != null) {
             previousAsyncContext.complete();
+        } else {
+            //only if driver is scheduling a pickup for first time.
+            onRideAvailable(passenger);
+            //todo second time should verify first connection is open? or
         }
 
-        onRideAvailable(passenger);
+
         //todo what happens if they're no rides available (nearby?) ? send fail error message?
     }
 
@@ -108,6 +113,7 @@ public class RideManager {
         for(Map.Entry<Driver,AsyncContext> driverEntry: driverAwaitingRide.entrySet()) {
 
             AsyncContext driverAsync = driverEntry.getValue();
+
 
             try {
                 ServletOutputStream outputStream = driverAsync.getResponse().getOutputStream();

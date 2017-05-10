@@ -7,6 +7,7 @@ import javax.servlet.DispatcherType;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.logging.Level;
 
 /**
@@ -34,8 +35,20 @@ public class SchedulePickupServlet extends RootServlet {
                     extractPassenger(req.getHeader("Authorization")),
                     null);
 
+
         } catch(TokenNotValidException tnve) {
             logger.log(Level.WARNING,"Token not valid or expired.",tnve);
+            try {
+                resp.sendError(401,"Not  Authorized");
+                if(req.isAsyncStarted()) {
+                    req.getAsyncContext().complete();
+                }
+                return;
+            } catch(IOException ioe) {
+                logger.log(Level.WARNING,"Error sending response code.",ioe);
+            }
+
+
         } catch(Exception e) {
             logger.log(Level.SEVERE,"This shouldn't happen",e);
         }
