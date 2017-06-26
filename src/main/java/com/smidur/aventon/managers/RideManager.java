@@ -165,13 +165,13 @@ public class RideManager {
             atLeastOneDriverNotified = true;
 
             String message = "Passenger: "+new Gson().toJson(passenger);
-            notifyMessageUserThroughAsync(driverAsync,message,driverEntry.getKey());
+            notifyMessageUserThroughAsync(driverAsync,message,driverEntry.getKey(),false);
 
         }
         if(!atLeastOneDriverNotified) {
             AsyncContext passengerAsync = passengerAwaitingPickup.get(passenger);
             String message = "NoDriverFound: "+passenger.toString();
-            notifyMessageUserThroughAsync(passengerAsync,message,passenger);
+            notifyMessageUserThroughAsync(passengerAsync,message,passenger,false);
             passengerAwaitingPickup.remove(passenger);
         }
 
@@ -225,7 +225,7 @@ public class RideManager {
                             +newUpdatedDriver.getDriverLocation().getLatitude()
                             +","
                             +newUpdatedDriver.getDriverLocation().getLongitude();
-                    notifyMessageUserThroughAsync(passengerAsync,message,newUpdatedDriver.getPassenger());
+                    notifyMessageUserThroughAsync(passengerAsync,message,newUpdatedDriver.getPassenger(),true);
                 }
 
             }
@@ -236,7 +236,7 @@ public class RideManager {
 
     }
 
-    private void notifyMessageUserThroughAsync(AsyncContext asyncContext,String message, Object keyToRemoveIfOld)  {
+    private void notifyMessageUserThroughAsync(AsyncContext asyncContext,String message, Object keyToRemoveIfOld,boolean keepConnection)  {
         try {
             ServletOutputStream outputStream = asyncContext.getResponse().getOutputStream();
             outputStream.println(message);//todo send json
@@ -249,7 +249,9 @@ public class RideManager {
         } catch(Exception e){
             e.printStackTrace();
         }
-        asyncContext.complete();
+        if(!keepConnection) {
+            asyncContext.complete();
+        }
     }
 
 }
