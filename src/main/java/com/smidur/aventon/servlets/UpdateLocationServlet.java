@@ -1,33 +1,29 @@
 package com.smidur.aventon.servlets;
 
-
+import com.google.gson.Gson;
 import com.smidur.aventon.managers.RideManager;
 import com.smidur.aventon.models.Driver;
 import com.smidur.aventon.models.Location;
 
-
 import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
-
-import javax.servlet.annotation.WebServlet;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import java.io.IOException;
+import java.io.*;
 import java.util.logging.Level;
 
 /**
- * Created by marqueg on 2/7/17.
+ * Created by marqueg on 5/25/17.
  */
-@WebServlet(asyncSupported = true)
-public class RideAvailabilityServlet extends RootServlet {
+public class UpdateLocationServlet extends RootServlet {
 
 
 
 
     @Override
-    public void doGet(HttpServletRequest req, HttpServletResponse resp)  {
+    public void doPut(HttpServletRequest req, HttpServletResponse resp)  {
+
+        System.out.println("size of hashmap ### "+RideManager.i().driverAwaitingRide.size()+" obj: "+RideManager.i());
 
         if(req.getDispatcherType() == DispatcherType.ERROR) {
             //todo remove async context from Ride Manager
@@ -38,16 +34,22 @@ public class RideAvailabilityServlet extends RootServlet {
         try {
 
             String driverIdentifier = extractIdentifier(req.getHeader("Authorization"));
-            Driver driver = new Driver();
 
-            driver.setDriverId(driverIdentifier);
-//            driver.setDriverLocation(new Location());
 
-            AsyncContext asyncContext = req.startAsync();
-            asyncContext.setTimeout(ASYNC_TIMEOUT);
-            RideManager.i().lookForRide(asyncContext,
-                    driver,
-                    null);
+            try {
+
+                String jsonString = readJsonFromInput(req.getInputStream());
+                Location driverLocation = new Gson().fromJson(jsonString, Location.class);
+
+                RideManager.i().updateDriverLocation(driverLocation, driverIdentifier);
+
+            } catch(IOException readInputException) {
+                logger.log(Level.WARNING,"JSON Format Exception",readInputException);
+                resp.sendError(500,"JSON Format Exception");
+                return;
+            }
+
+
 
         } catch(TokenNotValidException tnve) {
             logger.log(Level.WARNING,"Token not valid or expired.",tnve);
@@ -67,6 +69,14 @@ public class RideAvailabilityServlet extends RootServlet {
 
 
     }
-
+    protected String readJsonFromInput(InputStream is) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+        StringBuilder json = new StringBuilder();
+        String line = null;
+        while((line= reader.readLine())!= null) {
+            json.append(line);
+        }
+        return json!=null && !json.toString().isEmpty()?json.toString():null;
+    }
 
 }

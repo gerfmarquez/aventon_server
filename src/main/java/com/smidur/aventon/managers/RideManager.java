@@ -1,10 +1,15 @@
 package com.smidur.aventon.managers;
 
+import com.google.gson.Gson;
 import com.smidur.aventon.models.*;
+import com.smidur.aventon.utils.Constants;
+import com.smidur.aventon.utils.LocationUtils;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Map;
 
 
@@ -23,12 +28,12 @@ public class RideManager {
     HashMap<String,Ride> rideHashMap = new HashMap<>();
 
     //todo make these two hashmap's keys be the Driver and passenger so they're unique
-    HashMap<Driver,AsyncContext> driverAwaitingRide = new HashMap<>();
-    HashMap<Passenger,AsyncContext> passengerAwaitingPickup = new HashMap<>();
+    public volatile Hashtable<Driver,AsyncContext> driverAwaitingRide = new Hashtable<>();
+    Hashtable<Passenger,AsyncContext> passengerAwaitingPickup = new Hashtable<>();
     //todo also there should be a scheduled task that cleans up async contexts connections that are closed.
 
 
-    void findDriversNearby(PassengerLocation passengerLocation) {}
+    void findDriversNearby(Location location) {}
 
 
     /**
@@ -36,11 +41,17 @@ public class RideManager {
      * @param passenger
      * @param acceptPickup the callback that the driver INDIRECTLY  calls when they {@link #confirmRide}
      */
-    public void requestPickup(AsyncContext passengerAsync, Passenger passenger, AcceptPickup acceptPickup) {
+    public void requestPickup(AsyncContext passengerAsync, Passenger passenger, @Deprecated AcceptPickup acceptPickup) {
+
         AsyncContext previousAsyncContext = passengerAwaitingPickup.put(passenger,passengerAsync);
 
         if(previousAsyncContext != null) {
-            previousAsyncContext.complete();
+            //kill old connection
+            try {
+                previousAsyncContext.complete();
+            } catch(IllegalStateException ise) {
+                //don't do anything
+            }
         } else {
             //only if driver is scheduling a pickup for first time.
             onRideAvailable(passenger);
@@ -48,7 +59,7 @@ public class RideManager {
         }
 
 
-        //todo what happens if they're no rides available (nearby?) ? send fail error message?
+
     }
 
     public interface AcceptPickup {
@@ -59,6 +70,7 @@ public class RideManager {
         void onAcceptPickup(Driver driver);
     }
     private void onAcceptPickup(Driver driver, Passenger passenger) {
+
         for(Map.Entry<Passenger,AsyncContext> passengerEntry: passengerAwaitingPickup.entrySet()) {
 
             Passenger tempPassenger = passengerEntry.getKey();
@@ -68,10 +80,22 @@ public class RideManager {
 
                 passengerAsync = passengerEntry.getValue();
 
+
                 try {
                     ServletOutputStream outputStream = passengerAsync.getResponse().getOutputStream();
                     outputStream.println("Driver: "+driver.toString());
                     outputStream.flush();
+
+                    for(Map.Entry<Driver,AsyncContext> tempDriver: driverAwaitingRide.entrySet()) {
+                        if(tempDriver.getKey().equals(driver)) {
+                            tempDriver.getKey().setPassenger(passenger);
+                        }
+                        //todo un-assign passenger from driver once ride finishes
+                        ///or let it expire
+                    }
+
+                    //todo inform driver if  no  passenger  was found
+
 
                 } catch(IllegalStateException ise){
                     //todo improve connection dropped logic
@@ -93,12 +117,18 @@ public class RideManager {
      * @param driver
      * @param rideAvailable the callback that the passenger INDIRECTLY calls when they {@link #requestPickup}.
      */
-    public void lookForRide(AsyncContext asyncContext,Driver driver, RideAvailable rideAvailable) {
+    public void lookForRide(AsyncContext asyncContext,Driver driver, @Deprecated RideAvailable rideAvailable) {
         //todo check if the previous async context is closed before assigning the new one to the same Driver.
 
         AsyncContext previousAsyncContext = driverAwaitingRide.put(driver,asyncContext);
-        if(previousAsyncContext != null) {
-            previousAsyncContext.complete();
+        System.out.println("size of hashmap %%% "+driverAwaitingRide.size()+" obj: "+RideManager.this);
+        //kill old connection
+        try {
+            if(previousAsyncContext!=null) {
+                previousAsyncContext.complete();
+            }
+        } catch(IllegalStateException ise) {
+            //don't do anything
         }
     }
 
@@ -110,26 +140,43 @@ public class RideManager {
         void onRideAvailable(Passenger passenger);
     }
     private void onRideAvailable(Passenger passenger) {
+        boolean atLeastOneDriverNotified = false;
         for(Map.Entry<Driver,AsyncContext> driverEntry: driverAwaitingRide.entrySet()) {
 
             AsyncContext driverAsync = driverEntry.getValue();
+            Driver driver = driverEntry.getKey();
 
-
-            try {
-                ServletOutputStream outputStream = driverAsync.getResponse().getOutputStream();
-                outputStream.println("Passenger: "+passenger.toString());
-                outputStream.flush();
-
-            } catch(IllegalStateException ise){
-                //todo improve connection dropped logic
-                driverAwaitingRide.remove(driverEntry.getKey());
-                ise.printStackTrace();
-            } catch(Exception e){
-                e.printStackTrace();
+            Location passengerLocation = passenger.getOrigin().getLocation();
+            Location driverLocation = driver.getDriverLocation();//todo driver location
+            if(driverLocation == null) {
+                continue;//skip driver
             }
-            driverAsync.complete();
+
+            float distanceTo = LocationUtils.distanceBetween(
+                    passengerLocation.getLatitude(),
+                    passengerLocation.getLongitude(),
+                    driverLocation.getLatitude(),
+                    driverLocation.getLongitude()
+            );
+
+            if(distanceTo > Constants.PICKUP_THRESHOLD) {
+                continue;//don't notify drivers that are not nearby
+            }
+            atLeastOneDriverNotified = true;
+
+            String message = "Passenger: "+new Gson().toJson(passenger);
+            notifyMessageUserThroughAsync(driverAsync,message,driverEntry.getKey());
 
         }
+        if(!atLeastOneDriverNotified) {
+            AsyncContext passengerAsync = passengerAwaitingPickup.get(passenger);
+            String message = "NoDriverFound: "+passenger.toString();
+            notifyMessageUserThroughAsync(passengerAsync,message,passenger);
+            passengerAwaitingPickup.remove(passenger);
+        }
+
+        //todo setup a timer if no drivers accept the ride?
+        //todo what happens if there are no rides available (nearby?) ? send fail error message?
     }
 
 
@@ -142,6 +189,7 @@ public class RideManager {
 
 
         //todo validate and assign a ride, driver and passenger.
+
         onAcceptPickup(driver, passenger);
 
 
@@ -156,8 +204,52 @@ public class RideManager {
     }
 
 
+    public void updateDriverLocation(Location driverLocation, String driverIdentifier) {
+
+        System.out.println("size of hashmap $$$ "+driverAwaitingRide.size()+" obj: "+RideManager.this);
 
 
+        //todo fix instead of iterating every driver find a better way
+        for(Map.Entry<Driver,AsyncContext> tempDriver: driverAwaitingRide.entrySet()) {
+            Driver newUpdatedDriver = tempDriver.getKey();
+            if(newUpdatedDriver.getDriverId().equals(driverIdentifier)) {
+                //update latest location of the driver on the server side
+                newUpdatedDriver.setDriverLocation(driverLocation);
 
+
+                //if driverdoesn't have a passenger yet then dont send update of driver location to passenger
+
+                if(newUpdatedDriver.getPassenger()!=null) {
+                    AsyncContext passengerAsync = passengerAwaitingPickup.get(newUpdatedDriver.getPassenger());
+                    String message = "NewDriverLocation: "
+                            +newUpdatedDriver.getDriverLocation().getLatitude()
+                            +","
+                            +newUpdatedDriver.getDriverLocation().getLongitude();
+                    notifyMessageUserThroughAsync(passengerAsync,message,newUpdatedDriver.getPassenger());
+                }
+
+            }
+            //todo un-assign passenger from driver once ride finishes
+            ///or let it expire
+        }
+
+
+    }
+
+    private void notifyMessageUserThroughAsync(AsyncContext asyncContext,String message, Object keyToRemoveIfOld)  {
+        try {
+            ServletOutputStream outputStream = asyncContext.getResponse().getOutputStream();
+            outputStream.println(message);//todo send json
+            outputStream.flush();
+
+        } catch(IllegalStateException ise){
+            //todo improve connection dropped logic
+            driverAwaitingRide.remove(keyToRemoveIfOld);
+            ise.printStackTrace();
+        } catch(Exception e){
+            e.printStackTrace();
+        }
+        asyncContext.complete();
+    }
 
 }

@@ -30,25 +30,19 @@ public class RootServlet extends HttpServlet {
     protected static final int ASYNC_TIMEOUT = 4 * 60 * 1000;
 
 
-    protected Passenger extractPassenger(String authorizationParameter) throws TokenNotValidException {
-        return new Passenger(extractIdentifier(authorizationParameter));
-    }
-    protected Driver extractDriver(String authorizationParameter) throws TokenNotValidException {
-        return new Driver(extractIdentifier(authorizationParameter));
-    }
 
-    private String extractIdentifier(String authorizationParameter) throws TokenNotValidException {
-
-        logger.info("authorization " + authorizationParameter);
-        String payload[] = authorizationParameter.split("\\.");
-
-        logger.info("payload "+ " ,"+payload[1]);
-
-        String decodedPayload = new String(Base64.getDecoder().decode(payload[1].getBytes()));
-
-        logger.info("decoded payload "+ " ,"+decodedPayload);
+    protected String extractIdentifier(String authorizationParameter) throws TokenNotValidException {
 
         try {
+
+//            logger.info("authorization " + authorizationParameter);
+            String payload[] = authorizationParameter.split("\\.");
+
+//            logger.info("payload "+ " ,"+payload[1]);
+
+            String decodedPayload = new String(Base64.getDecoder().decode(payload[1].getBytes()));
+
+//            logger.info("decoded payload "+ " ,"+decodedPayload);
 
             Payload payloadObject = new Gson().fromJson(decodedPayload,
                     Payload.class);
@@ -70,7 +64,7 @@ public class RootServlet extends HttpServlet {
                 GetCredentialsForIdentityResult tokenResp = identityClient.getCredentialsForIdentity(request);
 
 
-               logger.info("Valie Token: "+tokenResp.getCredentials());
+//               logger.info("Valid Token: "+tokenResp.getCredentials());
 
                 return cognitoIdentityId;
 
@@ -81,7 +75,7 @@ public class RootServlet extends HttpServlet {
             }
 
 
-        } catch(JsonIOException jsonExc) {
+        } catch(JsonIOException|ArrayIndexOutOfBoundsException jsonExc) {
             logger.log(Level.SEVERE,jsonExc,null);
             throw new TokenNotValidException(jsonExc);
         }

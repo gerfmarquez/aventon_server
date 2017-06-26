@@ -1,13 +1,15 @@
 package com.smidur.aventon.servlets;
 
+import com.google.gson.Gson;
 import com.smidur.aventon.managers.RideManager;
+import com.smidur.aventon.models.Passenger;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
+import java.io.*;
 import java.util.logging.Level;
 
 /**
@@ -16,10 +18,9 @@ import java.util.logging.Level;
 @WebServlet(asyncSupported = true)
 public class SchedulePickupServlet extends RootServlet {
 
-    RideManager rideManager = RideManager.i();
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)  {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)  {
 
         if(req.getDispatcherType() == DispatcherType.ERROR) {
             //todo remove async context from Ride Manager
@@ -28,11 +29,21 @@ public class SchedulePickupServlet extends RootServlet {
         }
 
         try {
+            String passengerId = extractIdentifier(req.getHeader("Authorization"));
+
+            BufferedReader reader = new BufferedReader(req.getReader());
+            String tempLine;
+            StringBuilder jsonBuilder = new StringBuilder();
+            while((tempLine = reader.readLine()) != null) {
+                jsonBuilder.append(tempLine);
+            }
+            Passenger passenger = new Gson().fromJson(jsonBuilder.toString(),Passenger.class);
+            passenger.setPassengerId(passengerId);
+
 
             AsyncContext asyncContext = req.startAsync();
             asyncContext.setTimeout(ASYNC_TIMEOUT);
-            rideManager.requestPickup(asyncContext,
-                    extractPassenger(req.getHeader("Authorization")),
+            RideManager.i().requestPickup(asyncContext,passenger,
                     null);
 
 

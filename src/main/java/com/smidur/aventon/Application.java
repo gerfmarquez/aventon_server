@@ -9,10 +9,7 @@ import com.amazonaws.xray.entities.Subsegment;
 import com.amazonaws.xray.handlers.TracingHandler;
 import com.amazonaws.xray.javax.servlet.AWSXRayServletFilter;
 import com.amazonaws.xray.plugins.ElasticBeanstalkPlugin;
-import com.smidur.aventon.servlets.AcceptRideServlet;
-import com.smidur.aventon.servlets.DriverLocatorServlet;
-import com.smidur.aventon.servlets.RideAvailabilityServlet;
-import com.smidur.aventon.servlets.SchedulePickupServlet;
+import com.smidur.aventon.servlets.*;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -81,8 +78,9 @@ public class Application {
 //        handler.addServletWithMapping(TraceServlet.class, "/trace");
         handler.addServletWithMapping(CronServlet.class, "/crontask");
         handler.addServletWithMapping(DriverLocatorServlet.class, "/locate_drivers");
-        handler.addServletWithMapping(RideAvailabilityServlet.class, "/available_rides/*");
-        handler.addServletWithMapping(SchedulePickupServlet.class, "/shcedule_pickup/*");
+        handler.addServletWithMapping(UpdateLocationServlet.class, "/update_location");
+        handler.addServletWithMapping(RideAvailabilityServlet.class, "/available_rides");
+        handler.addServletWithMapping(SchedulePickupServlet.class, "/shcedule_pickup");
         handler.addServletWithMapping(AcceptRideServlet.class , "/accept_ride/*");
 
         handler.addFilterWithMapping(AWSXRayServletFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
