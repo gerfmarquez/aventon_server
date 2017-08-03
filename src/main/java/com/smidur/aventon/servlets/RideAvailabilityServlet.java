@@ -1,9 +1,12 @@
 package com.smidur.aventon.servlets;
 
 
+import com.google.gson.Gson;
 import com.smidur.aventon.managers.RideManager;
 import com.smidur.aventon.models.Driver;
+import com.smidur.aventon.models.DriverInfo;
 import com.smidur.aventon.models.Location;
+import com.smidur.aventon.models.Passenger;
 
 
 import javax.servlet.AsyncContext;
@@ -14,6 +17,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.logging.Level;
 
@@ -27,7 +31,7 @@ public class RideAvailabilityServlet extends RootServlet {
 
 
     @Override
-    public void doGet(HttpServletRequest req, HttpServletResponse resp)  {
+    public void doPost(HttpServletRequest req, HttpServletResponse resp)  {
 
         if(req.getDispatcherType() == DispatcherType.ERROR) {
             //todo remove async context from Ride Manager
@@ -41,7 +45,17 @@ public class RideAvailabilityServlet extends RootServlet {
             Driver driver = new Driver();
 
             driver.setDriverId(driverIdentifier);
-//            driver.setDriverLocation(new Location());
+
+            BufferedReader reader = new BufferedReader(req.getReader());
+            String tempLine;
+            StringBuilder jsonBuilder = new StringBuilder();
+            while((tempLine = reader.readLine()) != null) {
+                jsonBuilder.append(tempLine);
+            }
+            DriverInfo driverInfo = new Gson().fromJson(jsonBuilder.toString(),DriverInfo.class);
+            driver.setMakeModel(driverInfo.getMakeModel());
+            driver.setPlates(driverInfo.getPlates());
+
 
             AsyncContext asyncContext = req.startAsync();
             asyncContext.setTimeout(ASYNC_TIMEOUT);

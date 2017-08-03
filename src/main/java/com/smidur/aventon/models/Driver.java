@@ -12,6 +12,8 @@ public class Driver {
     @SerializedName("syncDriverLocation")
     private Location driverLocation;
     private Passenger passenger;
+    private String plates;
+    private String makeModel;
 
     public Location getDriverLocation() {
         return driverLocation;
@@ -35,6 +37,22 @@ public class Driver {
 
     public void setPassenger(Passenger passenger) {
         this.passenger = passenger;
+    }
+
+    public String getPlates() {
+        return plates;
+    }
+
+    public void setPlates(String plates) {
+        this.plates = plates;
+    }
+
+    public String getMakeModel() {
+        return makeModel;
+    }
+
+    public void setMakeModel(String makeModel) {
+        this.makeModel = makeModel;
     }
 
     @Override

@@ -48,15 +48,15 @@ public class RideManager {
         if(previousAsyncContext != null) {
             //kill old connection
             try {
-                previousAsyncContext.complete();
+                previousAsyncContext.complete();//todo remove? since client now closes connection
             } catch(IllegalStateException ise) {
                 //don't do anything
             }
-        } else {
-            //only if driver is scheduling a pickup for first time.
-            onRideAvailable(passenger);
-            //todo second time should verify first connection is open? or
         }
+        //only if driver is scheduling a pickup for first time.
+        onRideAvailable(passenger);
+        //todo second time should verify first connection is open? or
+
 
 
 
@@ -82,13 +82,17 @@ public class RideManager {
 
 
                 try {
-                    ServletOutputStream outputStream = passengerAsync.getResponse().getOutputStream();
-                    outputStream.println("Driver: "+driver.toString());
-                    outputStream.flush();
+
 
                     for(Map.Entry<Driver,AsyncContext> tempDriver: driverAwaitingRide.entrySet()) {
                         if(tempDriver.getKey().equals(driver)) {
                             tempDriver.getKey().setPassenger(passenger);
+
+                            ServletOutputStream outputStream = passengerAsync.getResponse().getOutputStream();
+                            String json = new Gson().toJson(tempDriver.getKey()).replaceAll("(\\r|\\n|\\r\\n)+", "\\\\n");
+                            outputStream.println("Driver: "+json);
+                            outputStream.flush();
+
                         }
                         //todo un-assign passenger from driver once ride finishes
                         ///or let it expire
@@ -130,6 +134,7 @@ public class RideManager {
         } catch(IllegalStateException ise) {
             //don't do anything
         }
+        System.out.println();
     }
 
     public interface RideAvailable {
@@ -140,6 +145,17 @@ public class RideManager {
         void onRideAvailable(Passenger passenger);
     }
     private void onRideAvailable(Passenger passenger) {
+
+        //check if passenger taken already by another driver.
+        for(Map.Entry<Driver,AsyncContext> driverEntry: driverAwaitingRide.entrySet()) {
+
+            Driver driver = driverEntry.getKey();
+            if(driver.getPassenger() != null) {
+                return;//passenger taken so dont notify any drivers anymore
+            }
+
+        }
+
         boolean atLeastOneDriverNotified = false;
         for(Map.Entry<Driver,AsyncContext> driverEntry: driverAwaitingRide.entrySet()) {
 
