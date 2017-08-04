@@ -71,6 +71,31 @@ public class RideManager {
     }
     private void onAcceptPickup(Driver driver, Passenger passenger) {
 
+        //check if passenger taken already by another driver.
+        for(Map.Entry<Driver,AsyncContext> driverEntry: driverAwaitingRide.entrySet()) {
+
+            Driver checkOtherDriversAssignedPassenger = driverEntry.getKey();
+            //don't notify drivers who are trying to
+            if(!driver.equals(checkOtherDriversAssignedPassenger) && checkOtherDriversAssignedPassenger.getPassenger() != null  && checkOtherDriversAssignedPassenger.getPassenger().equals(passenger)) {
+                //inform driver of unsuccessful ride assignment
+                try {
+                    AsyncContext driverAsync = driverAwaitingRide.get(driver);
+                    ServletOutputStream outputStream = driverAsync.getResponse().getOutputStream();
+
+                    outputStream.println("Taken: ");
+                    outputStream.flush();
+
+                } catch(IllegalStateException ise) {
+                    ise.printStackTrace();
+                    driverAwaitingRide.remove(checkOtherDriversAssignedPassenger);
+                } catch(Exception e) {
+                    e.printStackTrace();
+                }
+                return;
+            }
+
+        }
+
         for(Map.Entry<Passenger,AsyncContext> passengerEntry: passengerAwaitingPickup.entrySet()) {
 
             Passenger tempPassenger = passengerEntry.getKey();
@@ -88,11 +113,32 @@ public class RideManager {
                         if(tempDriver.getKey().equals(driver)) {
                             tempDriver.getKey().setPassenger(passenger);
 
-                            ServletOutputStream outputStream = passengerAsync.getResponse().getOutputStream();
-                            String json = new Gson().toJson(tempDriver.getKey()).replaceAll("(\\r|\\n|\\r\\n)+", "\\\\n");
-                            outputStream.println("Driver: "+json);
-                            outputStream.flush();
+                            //notify driver of successful ride assignment
+                            try {
+                                ServletOutputStream outputStream = passengerAsync.getResponse().getOutputStream();
+                                String json = new Gson().toJson(tempDriver.getKey()).replaceAll("(\\r|\\n|\\r\\n)+", "\\\\n");
+                                outputStream.println("Driver: "+json);
+                                outputStream.flush();
 
+                            }  catch(IllegalStateException ise){
+                                //todo improve connection dropped logic
+                                passengerAwaitingPickup.remove(passengerEntry.getKey());
+                                ise.printStackTrace();
+                            }
+
+                            //notify driver of successful ride assignment
+                            try {
+                                AsyncContext driverAsyncContext = tempDriver.getValue();
+                                ServletOutputStream outputStream = driverAsyncContext.getResponse().getOutputStream();
+                                outputStream.println("Confirmed: ");
+                                outputStream.flush();
+
+                            } catch(IllegalStateException ise) {
+                                driverAwaitingRide.remove(tempDriver.getKey());
+                                ise.printStackTrace();
+                            }
+
+                            break;
                         }
                         //todo un-assign passenger from driver once ride finishes
                         ///or let it expire
@@ -101,14 +147,10 @@ public class RideManager {
                     //todo inform driver if  no  passenger  was found
 
 
-                } catch(IllegalStateException ise){
-                    //todo improve connection dropped logic
-                    passengerAwaitingPickup.remove(passengerEntry.getKey());
-                    ise.printStackTrace();
                 } catch(Exception e){
                     e.printStackTrace();
                 }
-                passengerAsync.complete();
+//                passengerAsync.complete();
             }
 
 
@@ -146,11 +188,13 @@ public class RideManager {
     }
     private void onRideAvailable(Passenger passenger) {
 
-        //check if passenger taken already by another driver.
+        //check if passenger taken already by any driver.
+        //this check is edge case and would happen if schedule service on android app
+        //
         for(Map.Entry<Driver,AsyncContext> driverEntry: driverAwaitingRide.entrySet()) {
 
             Driver driver = driverEntry.getKey();
-            if(driver.getPassenger() != null) {
+            if(driver.getPassenger() != null && driver.getPassenger().equals(passenger)) {
                 return;//passenger taken so dont notify any drivers anymore
             }
 
@@ -203,12 +247,9 @@ public class RideManager {
      */
     public void confirmRide(Driver driver, Passenger passenger, AssignRide onRideAssigned) {
 
-
         //todo validate and assign a ride, driver and passenger.
 
         onAcceptPickup(driver, passenger);
-
-
     }
 
     public interface AssignRide {
