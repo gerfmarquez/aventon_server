@@ -225,13 +225,13 @@ public class RideManager {
             atLeastOneDriverNotified = true;
 
             String message = "Passenger: "+new Gson().toJson(passenger);
-            notifyMessageUserThroughAsync(driverAsync,message,driverEntry.getKey(),false);
+            notifyMessageUserThroughAsync(driverAwaitingRide,driverAsync,message,driverEntry.getKey(),false);
 
         }
         if(!atLeastOneDriverNotified) {
             AsyncContext passengerAsync = passengerAwaitingPickup.get(passenger);
             String message = "NoDriverFound: "+passenger.toString();
-            notifyMessageUserThroughAsync(passengerAsync,message,passenger,false);
+            notifyMessageUserThroughAsync(passengerAwaitingPickup,passengerAsync,message,passenger,false);
             passengerAwaitingPickup.remove(passenger);
         }
 
@@ -282,7 +282,7 @@ public class RideManager {
                             +newUpdatedDriver.getDriverLocation().getLatitude()
                             +","
                             +newUpdatedDriver.getDriverLocation().getLongitude();
-                    notifyMessageUserThroughAsync(passengerAsync,message,newUpdatedDriver.getPassenger(),true);
+                    notifyMessageUserThroughAsync(passengerAwaitingPickup,passengerAsync,message,newUpdatedDriver.getPassenger(),true);
                 }
 
             }
@@ -293,7 +293,7 @@ public class RideManager {
 
     }
 
-    private void notifyMessageUserThroughAsync(AsyncContext asyncContext,String message, Object keyToRemoveIfOld,boolean keepConnection)  {
+    private void notifyMessageUserThroughAsync(Hashtable asyncContextHashMap,AsyncContext asyncContext,String message, Object keyToRemoveIfOld,boolean keepConnection)  {
         try {
             ServletOutputStream outputStream = asyncContext.getResponse().getOutputStream();
             outputStream.println(message);//todo send json
@@ -301,7 +301,7 @@ public class RideManager {
 
         } catch(IllegalStateException ise){
             //todo improve connection dropped logic
-            driverAwaitingRide.remove(keyToRemoveIfOld);
+            asyncContextHashMap.remove(keyToRemoveIfOld);
             ise.printStackTrace();
         } catch(Exception e){
             e.printStackTrace();
