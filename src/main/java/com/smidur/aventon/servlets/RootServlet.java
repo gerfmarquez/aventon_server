@@ -14,6 +14,10 @@ import com.smidur.aventon.models.Passenger;
 import com.smidur.aventon.utils.Log;
 
 import javax.servlet.http.HttpServlet;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -79,6 +83,16 @@ public class RootServlet extends HttpServlet {
             logger.log(Level.SEVERE,jsonExc,null);
             throw new TokenNotValidException(jsonExc);
         }
+    }
+
+    protected String readJsonFromInput(InputStream is) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+        StringBuilder json = new StringBuilder();
+        String line = null;
+        while((line= reader.readLine())!= null) {
+            json.append(line);
+        }
+        return json!=null && !json.toString().isEmpty()?json.toString():null;
     }
 
 

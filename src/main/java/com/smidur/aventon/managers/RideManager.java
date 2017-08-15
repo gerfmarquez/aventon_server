@@ -76,7 +76,9 @@ public class RideManager {
 
             Driver checkOtherDriversAssignedPassenger = driverEntry.getKey();
             //don't notify drivers who are trying to
-            if(!driver.equals(checkOtherDriversAssignedPassenger) && checkOtherDriversAssignedPassenger.getPassenger() != null  && checkOtherDriversAssignedPassenger.getPassenger().equals(passenger)) {
+            if(!driver.equals(checkOtherDriversAssignedPassenger)
+                    && checkOtherDriversAssignedPassenger.getPassenger() != null
+                    && checkOtherDriversAssignedPassenger.getPassenger().equals(passenger)) {
                 //inform driver of unsuccessful ride assignment
                 try {
                     AsyncContext driverAsync = driverAwaitingRide.get(driver);
@@ -293,7 +295,45 @@ public class RideManager {
 
     }
 
-    private void notifyMessageUserThroughAsync(Hashtable asyncContextHashMap,AsyncContext asyncContext,String message, Object keyToRemoveIfOld,boolean keepConnection)  {
+    public void completeRide(Driver driver, Passenger passenger,RideSummary rideSummary) {
+
+
+        for(Map.Entry<Driver,AsyncContext> tempDriverSet: driverAwaitingRide.entrySet()) {
+            if(tempDriverSet.getKey().equals(driver)) {
+                Driver loadedDriver = tempDriverSet.getKey();
+
+                Passenger assignedPassenger = loadedDriver.getPassenger();
+                //check is the intended passenger
+                if(assignedPassenger != null && assignedPassenger.equals(passenger)) {
+
+                    for(Map.Entry<Passenger,AsyncContext> passengerEntry: passengerAwaitingPickup.entrySet()) {
+                        if(passengerEntry.getKey().equals(passenger)) {
+
+                            String rideSummaryJson = new Gson().toJson(rideSummary);
+
+                            notifyMessageUserThroughAsync(passengerAwaitingPickup,passengerEntry.getValue(),
+                                    "DropOff: "+rideSummaryJson, passengerEntry.getKey(),false);
+                            break;
+                        }
+
+                    }
+
+                }
+
+                notifyMessageUserThroughAsync(driverAwaitingRide,tempDriverSet.getValue(),"Completed:",
+                        tempDriverSet.getKey(),false);
+
+                break;
+            }
+
+        }
+
+
+    }
+
+
+    private void notifyMessageUserThroughAsync(Hashtable asyncContextHashMap,AsyncContext asyncContext,
+                                               String message, Object keyToRemoveIfOld, boolean keepConnection)  {
         try {
             ServletOutputStream outputStream = asyncContext.getResponse().getOutputStream();
             outputStream.println(message);//todo send json

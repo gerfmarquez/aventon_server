@@ -69,14 +69,6 @@ public class UpdateLocationServlet extends RootServlet {
 
 
     }
-    protected String readJsonFromInput(InputStream is) throws IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-        StringBuilder json = new StringBuilder();
-        String line = null;
-        while((line= reader.readLine())!= null) {
-            json.append(line);
-        }
-        return json!=null && !json.toString().isEmpty()?json.toString():null;
-    }
+
 
 }
