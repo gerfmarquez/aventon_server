@@ -51,6 +51,7 @@ public class RideManager {
                 previousAsyncContext.complete();//todo remove? since client now closes connection
             } catch(IllegalStateException ise) {
                 //don't do anything
+                //todo log analytics
             }
         }
         //only if driver is scheduling a pickup for first time.
@@ -69,19 +70,19 @@ public class RideManager {
          */
         void onAcceptPickup(Driver driver);
     }
-    private void onAcceptPickup(Driver driver, Passenger passenger) {
+    private void onAcceptPickup(Driver requestDriver, Passenger requestPassenger) {
 
         //check if passenger taken already by another driver.
         for(Map.Entry<Driver,AsyncContext> driverEntry: driverAwaitingRide.entrySet()) {
 
             Driver checkOtherDriversAssignedPassenger = driverEntry.getKey();
             //don't notify drivers who are trying to
-            if(!driver.equals(checkOtherDriversAssignedPassenger)
+            if(!requestDriver.equals(checkOtherDriversAssignedPassenger)
                     && checkOtherDriversAssignedPassenger.getPassenger() != null
-                    && checkOtherDriversAssignedPassenger.getPassenger().equals(passenger)) {
+                    && checkOtherDriversAssignedPassenger.getPassenger().equals(requestPassenger)) {
                 //inform driver of unsuccessful ride assignment
                 try {
-                    AsyncContext driverAsync = driverAwaitingRide.get(driver);
+                    AsyncContext driverAsync = driverAwaitingRide.get(requestDriver);
                     ServletOutputStream outputStream = driverAsync.getResponse().getOutputStream();
 
                     outputStream.println("Taken: ");
@@ -100,10 +101,10 @@ public class RideManager {
 
         for(Map.Entry<Passenger,AsyncContext> passengerEntry: passengerAwaitingPickup.entrySet()) {
 
-            Passenger tempPassenger = passengerEntry.getKey();
+            Passenger loadedPassenger = passengerEntry.getKey();
             AsyncContext passengerAsync  = null;
 
-            if(tempPassenger.equals(passenger)) {
+            if(loadedPassenger.equals(requestPassenger)) {
 
                 passengerAsync = passengerEntry.getValue();
 
@@ -111,14 +112,15 @@ public class RideManager {
                 try {
 
 
-                    for(Map.Entry<Driver,AsyncContext> tempDriver: driverAwaitingRide.entrySet()) {
-                        if(tempDriver.getKey().equals(driver)) {
-                            tempDriver.getKey().setPassenger(passenger);
+                    for(Map.Entry<Driver,AsyncContext> loadedDriver: driverAwaitingRide.entrySet()) {
 
-                            //notify driver of successful ride assignment
+                        if(loadedDriver.getKey().equals(requestDriver)) {
+                            loadedDriver.getKey().setPassenger(loadedPassenger);
+
+                            //notify passenger of successful ride assignment
                             try {
                                 ServletOutputStream outputStream = passengerAsync.getResponse().getOutputStream();
-                                String json = new Gson().toJson(tempDriver.getKey()).replaceAll("(\\r|\\n|\\r\\n)+", "\\\\n");
+                                String json = new Gson().toJson(loadedDriver.getKey()).replaceAll("(\\r|\\n|\\r\\n)+", "\\\\n");
                                 outputStream.println("Driver: "+json);
                                 outputStream.flush();
 
@@ -130,13 +132,13 @@ public class RideManager {
 
                             //notify driver of successful ride assignment
                             try {
-                                AsyncContext driverAsyncContext = tempDriver.getValue();
+                                AsyncContext driverAsyncContext = loadedDriver.getValue();
                                 ServletOutputStream outputStream = driverAsyncContext.getResponse().getOutputStream();
                                 outputStream.println("Confirmed: ");
                                 outputStream.flush();
 
                             } catch(IllegalStateException ise) {
-                                driverAwaitingRide.remove(tempDriver.getKey());
+                                driverAwaitingRide.remove(loadedDriver.getKey());
                                 ise.printStackTrace();
                             }
 
@@ -188,7 +190,7 @@ public class RideManager {
          */
         void onRideAvailable(Passenger passenger);
     }
-    private void onRideAvailable(Passenger passenger) {
+    private void onRideAvailable(Passenger requestPassenger) {
 
         //check if passenger taken already by any driver.
         //this check is edge case and would happen if schedule service on android app
@@ -196,7 +198,7 @@ public class RideManager {
         for(Map.Entry<Driver,AsyncContext> driverEntry: driverAwaitingRide.entrySet()) {
 
             Driver driver = driverEntry.getKey();
-            if(driver.getPassenger() != null && driver.getPassenger().equals(passenger)) {
+            if(driver.getPassenger() != null && driver.getPassenger().equals(requestPassenger)) {
                 return;//passenger taken so dont notify any drivers anymore
             }
 
@@ -208,7 +210,7 @@ public class RideManager {
             AsyncContext driverAsync = driverEntry.getValue();
             Driver driver = driverEntry.getKey();
 
-            Location passengerLocation = passenger.getOrigin().getLocation();
+            Location passengerLocation = requestPassenger.getOrigin().getLocation();
             Location driverLocation = driver.getDriverLocation();//todo driver location
             if(driverLocation == null) {
                 continue;//skip driver
@@ -226,15 +228,15 @@ public class RideManager {
             }
             atLeastOneDriverNotified = true;
 
-            String message = "Passenger: "+new Gson().toJson(passenger);
-            notifyMessageUserThroughAsync(driverAwaitingRide,driverAsync,message,driverEntry.getKey(),false);
+            String message = "Passenger: "+new Gson().toJson(requestPassenger);
+            notifyMessageUserThroughAsync(driverAwaitingRide,driverAsync,message,driverEntry.getKey(),true);
 
         }
         if(!atLeastOneDriverNotified) {
-            AsyncContext passengerAsync = passengerAwaitingPickup.get(passenger);
-            String message = "NoDriverFound: "+passenger.toString();
-            notifyMessageUserThroughAsync(passengerAwaitingPickup,passengerAsync,message,passenger,false);
-            passengerAwaitingPickup.remove(passenger);
+            AsyncContext passengerAsync = passengerAwaitingPickup.get(requestPassenger);
+            String message = "NoDriverFound: "+requestPassenger.toString();
+            notifyMessageUserThroughAsync(passengerAwaitingPickup,passengerAsync,message,requestPassenger,false);
+            passengerAwaitingPickup.remove(requestPassenger);
         }
 
         //todo setup a timer if no drivers accept the ride?
@@ -295,7 +297,7 @@ public class RideManager {
 
     }
 
-    public void completeRide(Driver driver, Passenger passenger,RideSummary rideSummary) {
+    public void completeRide(Driver driver, RideSummary rideSummary) {
 
 
         for(Map.Entry<Driver,AsyncContext> tempDriverSet: driverAwaitingRide.entrySet()) {
@@ -304,15 +306,18 @@ public class RideManager {
 
                 Passenger assignedPassenger = loadedDriver.getPassenger();
                 //check is the intended passenger
-                if(assignedPassenger != null && assignedPassenger.equals(passenger)) {
+                if(assignedPassenger != null && assignedPassenger.getPassengerId().equals(rideSummary.getPassengerId())) {
 
                     for(Map.Entry<Passenger,AsyncContext> passengerEntry: passengerAwaitingPickup.entrySet()) {
-                        if(passengerEntry.getKey().equals(passenger)) {
+                        if(passengerEntry.getKey().equals(assignedPassenger)) {
 
-                            String rideSummaryJson = new Gson().toJson(rideSummary);
+                            String rideSummaryJson = new Gson().toJson(rideSummary).replaceAll("(\\r|\\n|\\r\\n)+", "\\\\n");;
 
                             notifyMessageUserThroughAsync(passengerAwaitingPickup,passengerEntry.getValue(),
                                     "DropOff: "+rideSummaryJson, passengerEntry.getKey(),false);
+
+                            //we don't need the passenger anymore
+                            passengerAwaitingPickup.remove(passengerEntry.getKey());
                             break;
                         }
 

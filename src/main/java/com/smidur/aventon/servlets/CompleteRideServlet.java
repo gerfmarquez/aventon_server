@@ -31,8 +31,6 @@ public class CompleteRideServlet extends RootServlet{
         }
 
         try {
-            Passenger passenger = new Passenger();
-            passenger.setPassengerId(req.getParameter("passengerId"));
 
 
             String driverIdentifier = extractIdentifier(req.getHeader("Authorization"));
@@ -47,7 +45,7 @@ public class CompleteRideServlet extends RootServlet{
                 String jsonString = readJsonFromInput(req.getInputStream());
                 RideSummary rideSummary = new Gson().fromJson(jsonString, RideSummary.class);
 
-                RideManager.i().completeRide(driver, passenger,rideSummary);
+                RideManager.i().completeRide(driver, rideSummary);
 
             } catch(IOException readInputException) {
                 logger.log(Level.WARNING,"JSON Format Exception",readInputException);
