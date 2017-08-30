@@ -29,7 +29,7 @@ public class RideManager {
 
     //todo make these two hashmap's keys be the Driver and passenger so they're unique
     public volatile Hashtable<Driver,AsyncContext> driverAwaitingRide = new Hashtable<>();
-    Hashtable<Passenger,AsyncContext> passengerAwaitingPickup = new Hashtable<>();
+    public Hashtable<Passenger,AsyncContext> passengerAwaitingPickup = new Hashtable<>();
     //todo also there should be a scheduled task that cleans up async contexts connections that are closed.
 
 
@@ -318,6 +318,7 @@ public class RideManager {
 
                             //we don't need the passenger anymore
                             passengerAwaitingPickup.remove(passengerEntry.getKey());
+                            loadedDriver.setPassenger(null);
                             break;
                         }
 

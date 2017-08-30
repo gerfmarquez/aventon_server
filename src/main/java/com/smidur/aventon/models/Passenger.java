@@ -59,7 +59,7 @@ public class Passenger {
 
     @Override
     public String toString() {
-        return passengerId;
+        return "Origin: "+origin+" Destination: "+destination;
     }
 
     @Override

@@ -57,7 +57,7 @@ public class Driver {
 
     @Override
     public String toString() {
-        return driverId;
+        return "Location: "+driverLocation+", Passenger: "+passenger+" Plates: "+plates+" Make: "+makeModel;
     }
     @Override
     public boolean equals(Object obj) {

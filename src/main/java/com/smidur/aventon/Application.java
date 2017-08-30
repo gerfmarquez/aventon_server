@@ -83,6 +83,7 @@ public class Application {
         handler.addServletWithMapping(SchedulePickupServlet.class, "/shcedule_pickup");
         handler.addServletWithMapping(AcceptRideServlet.class , "/accept_ride");
         handler.addServletWithMapping(CompleteRideServlet.class , "/complete_ride");
+        handler.addServletWithMapping(DumpStateServlet.class , "/dump_state");
 
         handler.addFilterWithMapping(AWSXRayServletFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
         server.setHandler(handler);
