@@ -25,7 +25,7 @@ import java.io.StringWriter;
 import java.util.*;
 
 public class Application {
-//    private static final String BUCKET_NAME = String.format("elasticbeanstalk-samples-%s", Regions.getCurrentRegion().getName());
+    private static final String BUCKET_NAME = String.format("elasticbeanstalk-samples-%s", Regions.getCurrentRegion().getName());
     private static final String OBJECT_KEY = "java-sample-app-v2.zip";
 
     private static final String INDEX_HTML = loadIndex();
@@ -40,10 +40,10 @@ public class Application {
 
     // Create AWS clients instrumented with AWS XRay tracing handler
 
-//    private static final AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
-//            .withRegion(Regions.getCurrentRegion().getName())
-//            .withRequestHandlers(new TracingHandler())
-//            .build();
+    private static final AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
+            .withRegion(Regions.getCurrentRegion().getName())
+            .withRequestHandlers(new TracingHandler())
+            .build();
 
     private static String loadIndex() {
         final String fileName = isXRayEnabled() ? "/index_xray.html" : "/index_default.html";
@@ -111,30 +111,30 @@ public class Application {
         }
     }
 
-//    public static class TraceServlet extends HttpServlet {
-//        @Override
-//        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-//            response.setContentType("text/html;charset=utf-8");
-//            response.setStatus(HttpServletResponse.SC_OK);
-//
-//            if (isXRayEnabled()) {
-//                traceS3();
-//            }
-//        }
-//
-//        private void traceS3() {
-//            // Add subsegment to current request to track call to S3
-//            Subsegment subsegment = AWSXRay.beginSubsegment("## Getting object metadata");
-//            try {
-//                // Gets metadata about this sample app object in S3
-////                s3Client.getObjectMetadata(BUCKET_NAME, OBJECT_KEY);
-//            } catch (Exception ex) {
-//                subsegment.addException(ex);
-//            } finally {
-//                AWSXRay.endSubsegment();
-//            }
-//        }
-//    }
+    public static class TraceServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+            response.setContentType("text/html;charset=utf-8");
+            response.setStatus(HttpServletResponse.SC_OK);
+
+            if (isXRayEnabled()) {
+                traceS3();
+            }
+        }
+
+        private void traceS3() {
+            // Add subsegment to current request to track call to S3
+            Subsegment subsegment = AWSXRay.beginSubsegment("## Getting object metadata");
+            try {
+                // Gets metadata about this sample app object in S3
+                s3Client.getObjectMetadata(BUCKET_NAME, OBJECT_KEY);
+            } catch (Exception ex) {
+                subsegment.addException(ex);
+            } finally {
+                AWSXRay.endSubsegment();
+            }
+        }
+    }
 
 
 
