@@ -28,6 +28,7 @@ public class DumpStateServlet extends HttpServlet {
         prop.load(Application.class.getClassLoader().getResourceAsStream("key.properties"));
 
 
+
         String pass = req.getParameter("pass");
         if(pass != null && pass.contains(prop.getProperty("password"))) {
 //            String mode = req.getParameter("mode");
@@ -45,6 +46,8 @@ public class DumpStateServlet extends HttpServlet {
         }
         resp.setStatus(200);
         resp.setContentType("application/json");
+
+        throw new IOException("");
 
     }
 }

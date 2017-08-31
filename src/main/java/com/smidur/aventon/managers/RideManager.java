@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.smidur.aventon.models.*;
 import com.smidur.aventon.utils.Constants;
 import com.smidur.aventon.utils.LocationUtils;
+import com.smidur.aventon.utils.Log;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletOutputStream;
@@ -11,6 +12,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 /**
@@ -25,7 +28,9 @@ public class RideManager {
         return i;
     }
 
-    HashMap<String,Ride> rideHashMap = new HashMap<>();
+    Logger logger = Log.getLogger();
+
+
 
     //todo make these two hashmap's keys be the Driver and passenger so they're unique
     public volatile Hashtable<Driver,AsyncContext> driverAwaitingRide = new Hashtable<>();
@@ -51,6 +56,7 @@ public class RideManager {
                 previousAsyncContext.complete();//todo remove? since client now closes connection
             } catch(IllegalStateException ise) {
                 //don't do anything
+                logger.log(Level.WARNING,"Request Pickup async context illegal exception.");
                 //todo log analytics
             }
         }
@@ -86,6 +92,8 @@ public class RideManager {
                     ServletOutputStream outputStream = driverAsync.getResponse().getOutputStream();
 
                     outputStream.println("Taken: ");
+                    logger.log(Level.FINE
+                            ,"Ride Taken");
                     outputStream.flush();
 
                 } catch(IllegalStateException ise) {
@@ -124,8 +132,11 @@ public class RideManager {
                                 outputStream.println("Driver: "+json);
                                 outputStream.flush();
 
+                                logger.log(Level.FINE
+                                        ,"Driver Assigned to Passenger");
+
                             }  catch(IllegalStateException ise){
-                                //todo improve connection dropped logic
+                                logger.log(Level.WARNING,"Request Pickup async context illegal exception.");
                                 passengerAwaitingPickup.remove(passengerEntry.getKey());
                                 ise.printStackTrace();
                             }
@@ -136,23 +147,25 @@ public class RideManager {
                                 ServletOutputStream outputStream = driverAsyncContext.getResponse().getOutputStream();
                                 outputStream.println("Confirmed: ");
                                 outputStream.flush();
-
+                                logger.log(Level.FINE
+                                        ,"Confirmed Ride by Driver");
                             } catch(IllegalStateException ise) {
                                 driverAwaitingRide.remove(loadedDriver.getKey());
-                                ise.printStackTrace();
+                                logger.log(Level.WARNING
+                                        ,"Async Context Illegal while Confirming Ride by Driver");
                             }
 
                             break;
                         }
-                        //todo un-assign passenger from driver once ride finishes
-                        ///or let it expire
+
                     }
 
-                    //todo inform driver if  no  passenger  was found
+
 
 
                 } catch(Exception e){
-                    e.printStackTrace();
+                    logger.log(Level.WARNING
+                            ,"Exception while Accepting Pickup.",e);
                 }
 //                passengerAsync.complete();
             }
@@ -171,7 +184,6 @@ public class RideManager {
         //todo check if the previous async context is closed before assigning the new one to the same Driver.
 
         AsyncContext previousAsyncContext = driverAwaitingRide.put(driver,asyncContext);
-        System.out.println("size of hashmap %%% "+driverAwaitingRide.size()+" obj: "+RideManager.this);
         //kill old connection
         try {
             if(previousAsyncContext!=null) {
@@ -180,7 +192,7 @@ public class RideManager {
         } catch(IllegalStateException ise) {
             //don't do anything
         }
-        System.out.println();
+
     }
 
     public interface RideAvailable {
@@ -199,6 +211,8 @@ public class RideManager {
 
             Driver driver = driverEntry.getKey();
             if(driver.getPassenger() != null && driver.getPassenger().equals(requestPassenger)) {
+                logger.log(Level.WARNING
+                        ,"Edge Case Passenger Taken, inbetween schedule call long-pool refresh.");
                 return;//passenger taken so dont notify any drivers anymore
             }
 
@@ -231,16 +245,20 @@ public class RideManager {
             String message = "Passenger: "+new Gson().toJson(requestPassenger);
             notifyMessageUserThroughAsync(driverAwaitingRide,driverAsync,message,driverEntry.getKey(),true);
 
+            logger.log(Level.FINE
+                    ,"Passenger Available");
+
         }
         if(!atLeastOneDriverNotified) {
             AsyncContext passengerAsync = passengerAwaitingPickup.get(requestPassenger);
             String message = "NoDriverFound: "+requestPassenger.toString();
             notifyMessageUserThroughAsync(passengerAwaitingPickup,passengerAsync,message,requestPassenger,false);
             passengerAwaitingPickup.remove(requestPassenger);
+
+            logger.log(Level.FINE
+                    ,"No Drivers Found Nearby.");
         }
 
-        //todo setup a timer if no drivers accept the ride?
-        //todo what happens if there are no rides available (nearby?) ? send fail error message?
     }
 
 
@@ -267,8 +285,6 @@ public class RideManager {
 
     public void updateDriverLocation(Location driverLocation, String driverIdentifier) {
 
-        System.out.println("size of hashmap $$$ "+driverAwaitingRide.size()+" obj: "+RideManager.this);
-
 
         //todo fix instead of iterating every driver find a better way
         for(Map.Entry<Driver,AsyncContext> tempDriver: driverAwaitingRide.entrySet()) {
@@ -290,8 +306,7 @@ public class RideManager {
                 }
 
             }
-            //todo un-assign passenger from driver once ride finishes
-            ///or let it expire
+
         }
 
 
@@ -316,6 +331,9 @@ public class RideManager {
                             notifyMessageUserThroughAsync(passengerAwaitingPickup,passengerEntry.getValue(),
                                     "DropOff: "+rideSummaryJson, passengerEntry.getKey(),false);
 
+                            logger.log(Level.FINE
+                                    ,"Passenger Drop Off");
+
                             //we don't need the passenger anymore
                             passengerAwaitingPickup.remove(passengerEntry.getKey());
                             loadedDriver.setPassenger(null);
@@ -328,6 +346,9 @@ public class RideManager {
 
                 notifyMessageUserThroughAsync(driverAwaitingRide,tempDriverSet.getValue(),"Completed:",
                         tempDriverSet.getKey(),false);
+
+                logger.log(Level.FINE
+                        ,"Notified of Completed Ride To Driver");
 
                 break;
             }
@@ -342,15 +363,17 @@ public class RideManager {
                                                String message, Object keyToRemoveIfOld, boolean keepConnection)  {
         try {
             ServletOutputStream outputStream = asyncContext.getResponse().getOutputStream();
-            outputStream.println(message);//todo send json
+            outputStream.println(message);
             outputStream.flush();
 
         } catch(IllegalStateException ise){
-            //todo improve connection dropped logic
+            logger.log(Level.WARNING
+                    ,"Expired Async Context before Notifying");
             asyncContextHashMap.remove(keyToRemoveIfOld);
-            ise.printStackTrace();
+
         } catch(Exception e){
-            e.printStackTrace();
+            logger.log(Level.WARNING
+                    ,"Exception while notifying.",e);
         }
         if(!keepConnection) {
             asyncContext.complete();

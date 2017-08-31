@@ -18,7 +18,7 @@ import java.util.logging.Level;
 /**
  * Created by marqueg on 2/7/17.
  */
-@WebServlet(asyncSupported = true)
+
 public class AcceptRideServlet extends RootServlet  {
 
 

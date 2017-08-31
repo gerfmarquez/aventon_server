@@ -18,7 +18,7 @@ import java.util.logging.Level;
 /**
  * Created by marqueg on 8/14/17.
  */
-@WebServlet(asyncSupported = true)
+
 public class CompleteRideServlet extends RootServlet{
 
     @Override

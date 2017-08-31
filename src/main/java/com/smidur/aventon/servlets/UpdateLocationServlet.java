@@ -23,7 +23,6 @@ public class UpdateLocationServlet extends RootServlet {
     @Override
     public void doPut(HttpServletRequest req, HttpServletResponse resp)  {
 
-        System.out.println("size of hashmap ### "+RideManager.i().driverAwaitingRide.size()+" obj: "+RideManager.i());
 
         if(req.getDispatcherType() == DispatcherType.ERROR) {
             //todo remove async context from Ride Manager
