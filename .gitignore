@@ -7,4 +7,5 @@
 /gradle
 gradlew
 gradlew.bat
-/ui/ui.iml
+/ui/ui.imli
+/src/main/resources/key.properties
