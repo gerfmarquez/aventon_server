@@ -47,7 +47,5 @@ public class DumpStateServlet extends HttpServlet {
         resp.setStatus(200);
         resp.setContentType("application/json");
 
-        throw new IOException("");
-
     }
 }
