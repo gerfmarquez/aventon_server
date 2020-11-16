@@ -23,6 +23,12 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
 
+/** This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ * Copyright 2020, Gerardo Marquez.
+ */
+
 public class Application {
     private static final String BUCKET_NAME = String.format("elasticbeanstalk-samples-%s", Regions.getCurrentRegion().getName());
     private static final String OBJECT_KEY = "java-sample-app-v2.zip";
