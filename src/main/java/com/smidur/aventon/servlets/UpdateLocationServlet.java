@@ -12,9 +12,12 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.util.logging.Level;
 
-/**
- * Created by marqueg on 5/25/17.
+/** This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ * Copyright 2020, Gerardo Marquez.
  */
+
 public class UpdateLocationServlet extends RootServlet {
 
 
